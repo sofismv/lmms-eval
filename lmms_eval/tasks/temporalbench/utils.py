@@ -35,6 +35,7 @@ def prep_data():
 def temporalbench_doc_to_visual(doc):
     cache_dir = os.path.join(base_cache_dir, cache_name)
     video_path = os.path.join(cache_dir, doc["video_name"])
+    print("VIDEO PATH", video_path)
     if not os.path.exists(video_path):
         raise Exception(f"video path:{video_path} does not exist, please check")
     return video_path
