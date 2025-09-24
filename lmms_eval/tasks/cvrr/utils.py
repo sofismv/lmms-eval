@@ -170,22 +170,44 @@ def get_gpt_eval(question, answer, pred, max_tokens: int, retries: int = 5):
 
 def parse_score(review):
     try:
-        # Convert the string representation of a dictionary to an actual dictionary
-        # Escape single quotes inside the dictionary string to prevent parsing errors
-        review_dict = ast.literal_eval(review)
+        # Extract the first {...} block
+        match = re.search(r"\{.*\}", review, re.DOTALL)
+        if not match:
+            raise ValueError("No JSON object found in review")
+        
+        review_json = match.group(0)
+        review_dict = json.loads(review_json)  # safer than ast.literal_eval
+
         correctness = review_dict.get("pred", "incorrect")
         score = review_dict.get("score", 0)
         reason = review_dict.get("reason", "")
         return correctness, int(score), reason
-    except SyntaxError as e:
-        eval_logger.error(f"Syntax error parsing the review string: {e}. Review content: {review}")
-        return "incorrect", int(0), ""
-    except ValueError as e:
-        eval_logger.error(f"Value error parsing the review string: {e}. Review content: {review}")
-        return "incorrect", int(0), ""
+    
+    except (json.JSONDecodeError, SyntaxError, ValueError) as e:
+        eval_logger.error(f"Parse error parsing the review string: {e}. Review content: {review}")
+        return "incorrect", 0, ""
     except Exception as e:
         eval_logger.error(f"Unexpected error parsing the review string: {e}. Review content: {review}")
-        return "incorrect", int(0), ""
+        return "incorrect", 0, ""
+
+# def parse_score(review):
+#     try:
+#         # Convert the string representation of a dictionary to an actual dictionary
+#         # Escape single quotes inside the dictionary string to prevent parsing errors
+#         review_dict = ast.literal_eval(review)
+#         correctness = review_dict.get("pred", "incorrect")
+#         score = review_dict.get("score", 0)
+#         reason = review_dict.get("reason", "")
+#         return correctness, int(score), reason
+#     except SyntaxError as e:
+#         eval_logger.error(f"Syntax error parsing the review string: {e}. Review content: {review}")
+#         return "incorrect", int(0), ""
+#     except ValueError as e:
+#         eval_logger.error(f"Value error parsing the review string: {e}. Review content: {review}")
+#         return "incorrect", int(0), ""
+#     except Exception as e:
+#         eval_logger.error(f"Unexpected error parsing the review string: {e}. Review content: {review}")
+#         return "incorrect", int(0), ""
 
 
 # Process result for evaluation in temporal task
