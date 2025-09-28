@@ -98,7 +98,7 @@ def mvbench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
         option_letter = option_letters[char_index]
         option_prompt += f"({option_letter}) {option}\n"
 
-    full_text = "Question:" + doc["question"] + "\nOption:\n" + option_prompt
+    full_text = "Question:" + doc["question"] + "\nOption:\n" + option_prompt + "\nRespond ONLY in JSON\n"
     # + lmms_eval_specific_kwargs["post_prompt"]
     return full_text
 
