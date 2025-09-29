@@ -164,7 +164,7 @@ def mcq_acc(answer, pred):
 
 
 
-def mvbench_process_results(doc, results, save_path="mvbench_thoughts.jsonl"):
+def mvbench_process_results(doc, results):
     """
     Args:
         doc: a instance of the eval dataset
@@ -193,11 +193,6 @@ def mvbench_process_results(doc, results, save_path="mvbench_thoughts.jsonl"):
         "question": doc["question"]
     }
 
-    # --- Save thoughts (append to JSONL) ---
-    if thoughts is not None:
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        with open(save_path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(data_dict, ensure_ascii=False) + "\n")
 
     return {"mvbench_accuracy": data_dict}
 
