@@ -121,49 +121,47 @@ def mcq_acc(answer, pred):
     def process(answer):
         option_regex = re.compile(r"^([A-E])\.\s*(.+)$", re.IGNORECASE)
         match = option_regex.match(answer.strip())
-
         if match:
-            # If matched, return the option letter in uppercase
             return match.group(1).upper()
         else:
-            # If no match, process the answer as before
-            answer = answer.replace("\n", " ")
-            answer = answer.replace("\t", " ")
-            answer = answer.strip()
+            answer = answer.replace("\n", " ").replace("\t", " ").strip()
             answer = processPunctuation(answer)
-            answer = answer.strip("'")
-            answer = answer.strip('"')
-            answer = answer.strip(")")
-            answer = answer.strip("(")
-            answer = answer.strip().lower()
-
-            # Try to find any single letter (A-E) in the processed answer
+            answer = answer.strip("'\"()").strip().lower()
             letter_match = re.search(r"\b([A-E])\b", answer, re.IGNORECASE)
             if letter_match:
                 return letter_match.group(1).upper()
-
             return answer
+
+    # --- NEW: strip markdown fences ---
+    def strip_code_fences(s: str) -> str:
+        if not s:
+            return s
+        s = s.strip()
+        if s.startswith("```"):
+            s = re.sub(r"^```[a-zA-Z]*\n?", "", s)
+            s = re.sub(r"```$", "", s)
+        return s.strip()
 
     thoughts = None
     parsed_answer = pred
 
+    pred_clean = strip_code_fences(pred)
+
     try:
-        data = json.loads(pred)
+        data = json.loads(pred_clean)
         if isinstance(data, dict):
             thoughts = data.get("thoughts", None)
-            parsed_answer = data.get("answer", pred)
+            parsed_answer = data.get("answer", pred_clean)
     except Exception:
-        # Not valid JSON → fallback to text handling
-        parsed_answer = pred
+        parsed_answer = pred_clean  # fallback to text handling
 
-    # Process both gold and predicted answers
     parsed_answer = process(str(parsed_answer))
     answer = process(str(answer))
 
-    # Compare
     score = 1 if parsed_answer == answer else 0
 
     return score, thoughts
+
 
 
 def mvbench_process_results(doc, results, save_path="mvbench_thoughts.jsonl"):
