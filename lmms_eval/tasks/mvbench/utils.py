@@ -98,7 +98,8 @@ def mvbench_doc_to_text(doc, lmms_eval_specific_kwargs=None):
         option_letter = option_letters[char_index]
         option_prompt += f"({option_letter}) {option}\n"
 
-    full_text = "Question:" + doc["question"] + "\nOption:\n" + option_prompt + lmms_eval_specific_kwargs["post_prompt"]
+    full_text = "Question:" + doc["question"] + "\nOption:\n" + option_prompt + "\nRespond ONLY in JSON with two keys: \"thoughts\" (reasoning) and \"answer\" (only option letter).\n"
+    # + lmms_eval_specific_kwargs["post_prompt"]
     return full_text
 
 
@@ -143,18 +144,29 @@ def mcq_acc(answer, pred):
 
             return answer
 
-    pred = process(pred)
-    answer = process(answer)
+    thoughts = None
+    parsed_answer = pred
 
-    if pred == answer:
-        score = 1
-    else:
-        score = 0
+    try:
+        data = json.loads(pred)
+        if isinstance(data, dict):
+            thoughts = data.get("thoughts", None)
+            parsed_answer = data.get("answer", pred)
+    except Exception:
+        # Not valid JSON → fallback to text handling
+        parsed_answer = pred
 
-    return score
+    # Process both gold and predicted answers
+    parsed_answer = process(str(parsed_answer))
+    answer = process(str(answer))
+
+    # Compare
+    score = 1 if parsed_answer == answer else 0
+
+    return score, thoughts
 
 
-def mvbench_process_results(doc, results):
+def mvbench_process_results(doc, results, save_path="mvbench_thoughts.jsonl"):
     """
     Args:
         doc: a instance of the eval dataset
@@ -173,9 +185,21 @@ def mvbench_process_results(doc, results):
             break
 
     # Calculate the score using mcq_acc function
-    score = mcq_acc(gt_option_letter, pred)
+    score, thoughts = mcq_acc(gt_option_letter, pred)
 
-    data_dict = {"pred_answer": pred, "gt_answer": gt_option_letter, "score": score}
+    data_dict = {
+        "pred_answer": pred,
+        "gt_answer": gt_option_letter,
+        "score": score,
+        "thoughts": thoughts,
+        "question": doc["question"]
+    }
+
+    # --- Save thoughts (append to JSONL) ---
+    if thoughts is not None:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        with open(save_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(data_dict, ensure_ascii=False) + "\n")
 
     return {"mvbench_accuracy": data_dict}
 
