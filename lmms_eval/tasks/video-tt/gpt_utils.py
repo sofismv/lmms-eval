@@ -107,7 +107,7 @@ def get_eval(question, answer, pred, max_tokens: int, retries: int = 1):
 
 
 def parse_score(review):
-        try:
+    try:
         # Extract only the dict-like content
         match = re.search(r"\{.*?\}", review, re.DOTALL)
         if not match:
