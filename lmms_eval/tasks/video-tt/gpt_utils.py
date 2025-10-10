@@ -107,22 +107,25 @@ def get_eval(question, answer, pred, max_tokens: int, retries: int = 1):
 
 
 def parse_score(review):
-    try:
-        # Convert the string representation of a dictionary to an actual dictionary
-        review_dict = ast.literal_eval(review)
+        try:
+        # Extract only the dict-like content
+        match = re.search(r"\{.*?\}", review, re.DOTALL)
+        if not match:
+            raise SyntaxError("No dictionary found in review string")
+
+        clean_review = match.group(0)
+        review_dict = ast.literal_eval(clean_review)
+
         pred = review_dict.get("pred", "no")
         score = review_dict.get("score", 0)
         return [pred, float(score)]
-    except SyntaxError as e:
-        eval_logger.error(f"Syntax error parsing the review string: {e}. Review content: {review}")
-        return ["no", 0]
-    except ValueError as e:
-        eval_logger.error(f"Value error parsing the review string: {e}. Review content: {review}")
+
+    except (SyntaxError, ValueError) as e:
+        eval_logger.error(f"Error parsing review string: {e}. Review content: {review}")
         return ["no", 0]
     except Exception as e:
-        eval_logger.error(f"Unexpected error parsing the review string: {e}. Review content: {review}")
+        eval_logger.error(f"Unexpected error parsing review string: {e}. Review content: {review}")
         return ["no", 0]
-
 
 def gpt_score_process(doc, result):
     """
